@@ -3,12 +3,12 @@ mod tests {
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use singleLinkedList::{LinkedList, ListIntoIter};
+    use singleLinkedList::LinkedList;
 
     #[test]
     fn test_new() {
-        let list = LinkedList::new();
-        // assert_eq!(list.pop_front().value(), None)
+        let mut list = LinkedList::new();
+        assert_eq!(list.pop_front(), None)
     }
 
     #[test]
@@ -17,7 +17,7 @@ mod tests {
         list.insert_head(1);
         list.insert_head(2);
         list.insert_head(3);
-        assert_eq!(vec![3,2,1], Vec::<i32>::from(list));
+        assert_eq!(vec![3,2,1], list.get_values());
     }
 
     #[test]
@@ -31,7 +31,7 @@ mod tests {
     fn into_vec() {
         let vector = vec![1,2,3];
         let list: LinkedList = vector.clone().into();
-        let list_v = Vec::<i32>::from(list);
+        let list_v = list.get_values();
         assert_eq!(vector, list_v);
     }
 
@@ -53,7 +53,7 @@ mod tests {
         list.insert_tail(1);
         list.insert_tail(2);
         list.insert_tail(3);
-        assert_eq!(vec![1,2,3], Vec::<i32>::from(list));
+        assert_eq!(vec![1,2,3], list.get_values());
     }
 
     #[test]

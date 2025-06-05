@@ -155,9 +155,9 @@ impl LinkedList {
     pub fn iter_vals(&self) -> ListValIter {
         ListValIter(self.iter())
     }
-    // pub fn get_values(&self) -> Vec<i32> {
-    //     self.into()
-    // }
+    pub fn get_values(&self) -> Vec<i32> {
+        self.into()
+    }
     fn node_at(&self, idx: usize) -> Result<Rc<RefCell<Node>>, &'static str> {
         let mut i = 0_usize;
         for n in self.iter() {
