@@ -3,7 +3,7 @@ mod tests {
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use singleLinkedList::LinkedList;
+    use singleLinkedList::{LinkedList, ListIntoIter};
 
     #[test]
     fn test_new() {
@@ -40,5 +40,12 @@ mod tests {
         list.insert_tail(2);
         list.insert_tail(3);
         print!("{list}");
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut list: LinkedList = vec![3,2,1].into();
+        list.remove(1);
+        println!("{}", list);
     }
 }

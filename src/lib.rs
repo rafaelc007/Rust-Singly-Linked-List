@@ -1,4 +1,4 @@
-use std::{fmt::Display, rc::{Rc, Weak}};
+use std::{fmt::{Display, Error}, rc::{Rc, Weak}};
 use std::cell::{RefCell};
 
 
@@ -103,12 +103,15 @@ impl LinkedList {
         }
         self.size += 1;
     }
+
     pub fn get_head(&self) -> Rc<RefCell<Node>> {
         Rc::clone(&self.head)
     }
+
     pub fn tail(&self) -> i32 {
         self.tail.upgrade().unwrap().borrow().value().unwrap()
     }
+
     pub fn insert_tail(&mut self, val: i32) {
         let rc_tail = self.tail.upgrade().unwrap();
         if rc_tail.borrow().is_nil() {
@@ -121,6 +124,28 @@ impl LinkedList {
             self.size += 1;
         }
     }
+
+    pub fn remove(&mut self, idx: usize) -> bool {
+        if idx > self.size {
+            return false
+        }
+        if idx == 0 {return self.pop_front().is_some()}
+        let prev_node = 
+            match self.node_at(idx-1) {
+                Ok(v) => v,
+                Err(_) => {return false;}
+            };
+        
+        //replace node references here
+        if !prev_node.borrow().is_nil() {
+            let mut idx_ref = prev_node.borrow_mut().take_next();
+            if !idx_ref.is_nil() {
+                prev_node.borrow_mut().set_next(Node::ref_from(idx_ref.take_next()));
+            }
+            true
+        } else {false}
+    }
+
     pub fn into_iter(self) -> ListIntoIter {
         ListIntoIter(self)
     }
@@ -130,14 +155,19 @@ impl LinkedList {
     pub fn iter_vals(&self) -> ListValIter {
         ListValIter(self.iter())
     }
-    // pub fn insert_at(&mut self, index: usize, val: i32) -> bool {
-    //     false
-    // }
-    // pub fn remove(&mut self, idx: usize) -> bool {false}
-
     // pub fn get_values(&self) -> Vec<i32> {
     //     self.into()
     // }
+    fn node_at(&self, idx: usize) -> Result<Rc<RefCell<Node>>, &'static str> {
+        let mut i = 0_usize;
+        for n in self.iter() {
+            if i == idx {
+                return Ok(n.upgrade().unwrap())
+            }
+            i += 1;
+        }
+        Err("Out of bounds")
+    }
     pub fn pop_front(&mut self) -> Option<i32> {
         if let Some(v)= self.head.borrow().value() {
             self.head.swap(self.head.borrow().get_next());
