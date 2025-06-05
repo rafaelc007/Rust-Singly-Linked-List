@@ -17,7 +17,7 @@ mod tests {
         list.insert_head(1);
         list.insert_head(2);
         list.insert_head(3);
-        println!("{:?}", &list);
+        assert_eq!(vec![3,2,1], Vec::<i32>::from(list));
     }
 
     #[test]
@@ -28,9 +28,23 @@ mod tests {
     }
 
     #[test]
+    fn into_vec() {
+        let vector = vec![1,2,3];
+        let list: LinkedList = vector.clone().into();
+        let list_v = Vec::<i32>::from(list);
+        assert_eq!(vector, list_v);
+    }
+
+    #[test]
     fn test_intoiter() {
-        let list: LinkedList = vec![3, 2, 1].into();
-        print!("{list}");
+        let mut vector: Vec<i32> = vec![];
+        let list: LinkedList = vec![1,2,3].into();
+        for n in list.into_iter() {
+            if let Some(v) = n.value() {
+                vector.push(v);
+            }
+        }
+        assert_eq!(vector, vec![1,2,3]);
     }
 
     #[test]
@@ -39,7 +53,7 @@ mod tests {
         list.insert_tail(1);
         list.insert_tail(2);
         list.insert_tail(3);
-        print!("{list}");
+        assert_eq!(vec![1,2,3], Vec::<i32>::from(list));
     }
 
     #[test]

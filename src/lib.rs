@@ -178,7 +178,9 @@ impl LinkedList {
     // Removes node from head and returns it
     pub fn take_head(&mut self) -> Node {
         let old_head = self.head.take();
-        self.head.swap(old_head.get_next());
+        if !old_head.is_nil() {
+            self.head.swap(old_head.get_next());
+        }
         old_head
     }
 }
@@ -216,25 +218,21 @@ impl From<Vec<i32>> for LinkedList {
     }
 }
 
-// impl From<LinkedList> for Vec<i32> {
-//     fn from(list: LinkedList) -> Self {
-//         let mut vector = vec!();
-//         for val in list.into_iter() {
-//             vector.push(val);
-//         }
-//         vector
-//     }
-// }
+impl From<LinkedList> for Vec<i32> {
+    fn from(list: LinkedList) -> Self {
+        Self::from(&list)
+    }
+}
 
-// impl From<&LinkedList> for Vec<i32> {
-//     fn from(list: &LinkedList) -> Self {
-//         let mut vector = vec!();
-//         for val in list.into_iter() {
-//             vector.push(val);
-//         }
-//         vector
-//     }
-// }
+impl From<&LinkedList> for Vec<i32> {
+    fn from(list: &LinkedList) -> Self {
+        let mut vector = vec!();
+        for val in list.iter_vals() {
+            vector.push(val);
+        }
+        vector
+    }
+}
 
 /// creates a list iterator to access nodes in for loops
 pub struct ListIter {
