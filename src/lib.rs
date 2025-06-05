@@ -106,8 +106,20 @@ impl LinkedList {
     pub fn get_head(&self) -> Rc<RefCell<Node>> {
         Rc::clone(&self.head)
     }
+    pub fn tail(&self) -> i32 {
+        self.tail.upgrade().unwrap().borrow().value().unwrap()
+    }
     pub fn insert_tail(&mut self, val: i32) {
-        
+        let rc_tail = self.tail.upgrade().unwrap();
+        if rc_tail.borrow().is_nil() {
+            self.insert_head(val);
+        } else {
+            let new_tail = Node::ref_from(
+                Node::raw_from(val, rc_tail.borrow().get_next().take()));
+            rc_tail.borrow_mut().set_next(new_tail);
+            self.tail = Rc::downgrade(rc_tail.borrow().get_next());
+            self.size += 1;
+        }
     }
     pub fn into_iter(self) -> ListIntoIter {
         ListIntoIter(self)
