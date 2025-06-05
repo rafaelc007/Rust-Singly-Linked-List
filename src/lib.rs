@@ -10,9 +10,10 @@ use std::cell::{RefCell};
 /// use std::rc::Rc;
 /// use std::cell::RefCell;
 ///
-/// let node1 = Node::new(); // empty node
-/// let node2 = Node::from(3, node1); //non-empty
-/// assert_eq!(&node2.get_next().value(), &node1.value());
+/// let node1 = Node::raw_from(2, Node::new());
+/// let node2 = Node::raw_from(3, node1); //non-empty
+/// let next_node2_val = &node2.get_next().borrow().value();
+/// assert_eq!(next_node2_val.unwrap(), 2);
 /// ```
 #[derive(Debug)]
 pub enum Node {
@@ -114,6 +115,9 @@ impl LinkedList {
     pub fn iter(&self) -> ListIter {
         ListIter::from(self)
     }
+    pub fn iter_vals(&self) -> ListValIter {
+        ListValIter(self.iter())
+    }
     // pub fn insert_at(&mut self, index: usize, val: i32) -> bool {
     //     false
     // }
@@ -129,12 +133,18 @@ impl LinkedList {
         }
         None
     }
+    // Removes node from head and returns it
+    pub fn take_head(&mut self) -> Node {
+        let old_head = self.head.take();
+        self.head.swap(old_head.get_next());
+        old_head
+    }
 }
 
 impl Display for LinkedList {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut out_str = String::new();
-        for v in self.iter() {
+        for v in self.iter_vals() {
             out_str.push_str(&format!("{v} "));
         }
         out_str.pop();
@@ -145,9 +155,12 @@ impl Display for LinkedList {
 pub struct ListIntoIter(LinkedList);
 
 impl Iterator for ListIntoIter {
-    type Item = i32;
+    type Item = Node;
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.pop_front()
+        let ret_node = self.0.take_head();
+        if ret_node.is_nil() {
+            None
+        } else {Some(ret_node)}
     }
 }
 
@@ -181,6 +194,7 @@ impl From<Vec<i32>> for LinkedList {
 //     }
 // }
 
+/// creates a list iterator to access nodes in for loops
 pub struct ListIter {
     curr: Weak<RefCell<Node>>
 }
@@ -193,12 +207,25 @@ impl ListIter {
 }
 
 impl Iterator for ListIter {
-    type Item = i32;
+    type Item = Weak<RefCell<Node>>;
     fn next(&mut self) -> Option<Self::Item> {
         let upgrade_curr = self.curr.upgrade().unwrap();
-        if let Some(val) = upgrade_curr.borrow().value() {
-            self.curr = Rc::downgrade(upgrade_curr.borrow().get_next());
-            return Some(val)
+        if !upgrade_curr.borrow().is_nil() {
+            self.curr = Rc::downgrade(&upgrade_curr.borrow().get_next());
+            return Some(Rc::downgrade(&upgrade_curr))
+        }
+        None
+    }
+}
+
+/// creates a iterator to get values on for loops
+pub struct ListValIter(ListIter);
+
+impl Iterator for ListValIter {
+    type Item = i32;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(next_node) = self.0.next() {
+            return next_node.upgrade().unwrap().borrow().value()
         }
         None
     }
