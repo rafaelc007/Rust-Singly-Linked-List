@@ -16,22 +16,24 @@ use std::cell::{RefCell};
 /// assert_eq!(next_node2_val.unwrap(), 2);
 /// ```
 #[derive(Debug)]
-pub enum Node {
-    Val(i32, Rc<RefCell<Node>>),
+pub enum Node<T> {
+    Val(T, Rc<RefCell<Node<T>>>),
     Nil
 }
 
-impl Node {
+impl<T> Node<T>
+where
+    T: Copy+Clone {
     pub fn new() -> Self {
         Node::Nil
     }
-    pub fn raw_from(val: i32, next: Node) -> Self {
+    pub fn raw_from(val: T, next: Node<T>) -> Self {
         Node::Val(val, Node::ref_from(next))
     }
-    pub fn ref_from(node: Node) -> Rc<RefCell<Node>> {
+    pub fn ref_from(node: Node<T>) -> Rc<RefCell<Node<T>>> {
         Rc::new(RefCell::new(node))
     }
-    pub fn ref_new() -> Rc<RefCell<Node>> {
+    pub fn ref_new() -> Rc<RefCell<Node<T>>> {
         Node::ref_from(Node::new())
     }
     pub fn is_nil(&self) -> bool {
@@ -40,30 +42,30 @@ impl Node {
             Node::Val(_, _) => false
         }
     }
-    pub fn value(&self) -> Option<i32> {
+    pub fn value(&self) -> Option<T> {
         if let Node::Val(n, _) = self {
             return Some(*n)
         }
         None
     }
-    pub fn set_val(&mut self, val: i32) {
+    pub fn set_val(&mut self, val: T) {
         if let Node::Val(v, _) = self {
             *v = val;
         }
     }
     /// Provides a reference to the next node
-    pub fn get_next(&self) -> &Rc<RefCell<Node>> {
+    pub fn get_next(&self) -> &Rc<RefCell<Node<T>>> {
         if let Node::Val(_, next) = self {
             return next;
         }
         panic!("Tried to access next for an empty node");
     }
-    pub fn set_next(&mut self, node: Rc<RefCell<Node>>) {
+    pub fn set_next(&mut self, node: Rc<RefCell<Node<T>>>) {
         if let Node::Val(_, n) = self {
             n.swap(&node);
         }
     }
-    pub fn take_next(&mut self) -> Node {
+    pub fn take_next(&mut self) -> Node<T> {
         if let Node::Val(_, next) = self {
             return next.take();
         }
@@ -71,20 +73,22 @@ impl Node {
     }
 }
 
-impl Default for Node {
+impl<T> Default for Node<T> {
     fn default() -> Self {
         Node::Nil
     }
 }
 
 #[derive(Debug)]
-pub struct LinkedList {
-    head: Rc<RefCell<Node>>,
-    tail: Weak<RefCell<Node>>,
+pub struct LinkedList<T> {
+    head: Rc<RefCell<Node<T>>>,
+    tail: Weak<RefCell<Node<T>>>,
     size: usize,
 }
 
-impl LinkedList {
+impl<T> LinkedList<T>
+where
+    T: Copy+Clone {
     /// Creates a new empty list
     pub fn new() -> Self {
         let head = Node::ref_new();
@@ -95,8 +99,8 @@ impl LinkedList {
         }
     }
 
-    pub fn insert_head(&mut self, val: i32) {
-        self.head.swap(&Node::ref_from(Node::raw_from(val, self.head.take())));
+    pub fn insert_head(&mut self, val: T) {
+        self.head.replace(Node::raw_from(val, self.head.take()));
         if self.head.borrow().get_next().borrow().is_nil() {
             // if head points to Nil it is the last of the list
             self.tail = Rc::downgrade(&self.head);
@@ -104,15 +108,15 @@ impl LinkedList {
         self.size += 1;
     }
 
-    pub fn get_head(&self) -> Rc<RefCell<Node>> {
+    pub fn get_head(&self) -> Rc<RefCell<Node<T>>> {
         Rc::clone(&self.head)
     }
 
-    pub fn tail(&self) -> i32 {
+    pub fn tail(&self) -> T {
         self.tail.upgrade().unwrap().borrow().value().unwrap()
     }
 
-    pub fn insert_tail(&mut self, val: i32) {
+    pub fn insert_tail(&mut self, val: T) {
         let rc_tail = self.tail.upgrade().unwrap();
         if rc_tail.borrow().is_nil() {
             self.insert_head(val);
@@ -146,19 +150,19 @@ impl LinkedList {
         } else {false}
     }
 
-    pub fn into_iter(self) -> ListIntoIter {
+    pub fn into_iter(self) -> ListIntoIter<T> {
         ListIntoIter(self)
     }
-    pub fn iter(&self) -> ListIter {
+    pub fn iter(&self) -> ListIter<T> {
         ListIter::from(self)
     }
-    pub fn iter_vals(&self) -> ListValIter {
+    pub fn iter_vals(&self) -> ListValIter<T> {
         ListValIter(self.iter())
     }
-    pub fn get_values(&self) -> Vec<i32> {
+    pub fn get_values(&self) -> Vec<T> {
         self.into()
     }
-    fn node_at(&self, idx: usize) -> Result<Rc<RefCell<Node>>, &'static str> {
+    fn node_at(&self, idx: usize) -> Result<Rc<RefCell<Node<T>>>, &'static str> {
         let mut i = 0_usize;
         for n in self.iter() {
             if i == idx {
@@ -168,7 +172,7 @@ impl LinkedList {
         }
         Err("Out of bounds")
     }
-    pub fn pop_front(&mut self) -> Option<i32> {
+    pub fn pop_front(&mut self) -> Option<T> {
         if let Some(v)= self.head.borrow().value() {
             self.head.swap(self.head.borrow().get_next());
             return Some(v);
@@ -176,7 +180,7 @@ impl LinkedList {
         None
     }
     // Removes node from head and returns it
-    pub fn take_head(&mut self) -> Node {
+    pub fn take_head(&mut self) -> Node<T> {
         let old_head = self.head.take();
         if !old_head.is_nil() {
             self.head.swap(old_head.get_next());
@@ -185,7 +189,9 @@ impl LinkedList {
     }
 }
 
-impl Display for LinkedList {
+impl<T> Display for LinkedList<T>
+where
+    T: Clone+Copy+Display {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut out_str = String::new();
         for v in self.iter_vals() {
@@ -196,10 +202,12 @@ impl Display for LinkedList {
     }
 }
 
-pub struct ListIntoIter(LinkedList);
+pub struct ListIntoIter<T>(LinkedList<T>);
 
-impl Iterator for ListIntoIter {
-    type Item = Node;
+impl<T> Iterator for ListIntoIter<T>
+where
+    T:Clone+Copy {
+    type Item = Node<T>;
     fn next(&mut self) -> Option<Self::Item> {
         let ret_node = self.0.take_head();
         if ret_node.is_nil() {
@@ -208,8 +216,10 @@ impl Iterator for ListIntoIter {
     }
 }
 
-impl From<Vec<i32>> for LinkedList {
-    fn from(values: Vec<i32>) -> Self {
+impl<T> From<Vec<T>> for LinkedList<T>
+where
+    T:Clone+Copy {
+    fn from(values: Vec<T>) -> Self {
         let mut list = Self::new();
         for val in values.iter().rev() {
             list.insert_head(*val);
@@ -218,14 +228,18 @@ impl From<Vec<i32>> for LinkedList {
     }
 }
 
-impl From<LinkedList> for Vec<i32> {
-    fn from(list: LinkedList) -> Self {
+impl<T> From<LinkedList<T>> for Vec<T>
+where
+    T:Clone+Copy {
+    fn from(list: LinkedList<T>) -> Self {
         Self::from(&list)
     }
 }
 
-impl From<&LinkedList> for Vec<i32> {
-    fn from(list: &LinkedList) -> Self {
+impl<T> From<&LinkedList<T>> for Vec<T>
+where
+    T:Clone+Copy {
+    fn from(list: &LinkedList<T>) -> Self {
         let mut vector = vec!();
         for val in list.iter_vals() {
             vector.push(val);
@@ -235,19 +249,23 @@ impl From<&LinkedList> for Vec<i32> {
 }
 
 /// creates a list iterator to access nodes in for loops
-pub struct ListIter {
-    curr: Weak<RefCell<Node>>
+pub struct ListIter<T> {
+    curr: Weak<RefCell<Node<T>>>
 }
 
-impl ListIter {
-    pub fn from(list: &LinkedList) -> Self {
+impl<T> ListIter<T>
+where
+    T:Clone+Copy {
+    pub fn from(list: &LinkedList<T>) -> Self {
         let curr = Rc::downgrade(&list.get_head());
         ListIter {curr}
     }
 }
 
-impl Iterator for ListIter {
-    type Item = Weak<RefCell<Node>>;
+impl<T> Iterator for ListIter<T>
+where
+    T:Clone+Copy {
+    type Item = Weak<RefCell<Node<T>>>;
     fn next(&mut self) -> Option<Self::Item> {
         let upgrade_curr = self.curr.upgrade().unwrap();
         if !upgrade_curr.borrow().is_nil() {
@@ -259,10 +277,12 @@ impl Iterator for ListIter {
 }
 
 /// creates a iterator to get values on for loops
-pub struct ListValIter(ListIter);
+pub struct ListValIter<T>(ListIter<T>);
 
-impl Iterator for ListValIter {
-    type Item = i32;
+impl<T> Iterator for ListValIter<T>
+where
+    T:Clone+Copy {
+    type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(next_node) = self.0.next() {
             return next_node.upgrade().unwrap().borrow().value()
